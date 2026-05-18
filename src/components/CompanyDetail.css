@@ -1,0 +1,233 @@
+.company-detail {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 600px;
+  background-color: white;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
+  overflow-y: auto;
+  z-index: 1000;
+}
+
+.company-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  background-color: #2c3e50;
+  color: white;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.company-detail-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.btn-close {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 2rem;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.btn-close:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.company-info {
+  padding: 1.5rem;
+  border-bottom: 1px solid #ecf0f1;
+}
+
+.company-view .info-row {
+  margin-bottom: 1rem;
+}
+
+.company-view .info-row strong {
+  color: #7f8c8d;
+  margin-right: 0.5rem;
+}
+
+.edit-form .form-group {
+  margin-bottom: 1rem;
+}
+
+.edit-form label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #2c3e50;
+  font-weight: 500;
+}
+
+.edit-form input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #bdc3c7;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.button-group {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.btn-secondary {
+  background-color: #95a5a6;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.btn-secondary:hover {
+  background-color: #7f8c8d;
+}
+
+.btn-danger {
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.btn-danger:hover {
+  background-color: #c0392b;
+}
+
+.employees-section {
+  padding: 1.5rem;
+}
+
+.employees-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.employees-header h3 {
+  margin: 0;
+  color: #2c3e50;
+}
+
+.employees-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.employee-card {
+  background-color: #f8f9fa;
+  padding: 1rem;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.employee-info h4 {
+  margin: 0 0 0.5rem 0;
+  color: #2c3e50;
+}
+
+.employee-info p {
+  margin: 0.25rem 0;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.employee-position {
+  color: #3498db;
+  font-weight: 500;
+}
+
+.employee-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-direction: column;
+}
+
+.btn-small {
+  background-color: #3498db;
+  color: white;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.btn-small:hover {
+  background-color: #2980b9;
+}
+
+.btn-small.btn-danger {
+  background-color: #e74c3c;
+}
+
+.btn-small.btn-danger:hover {
+  background-color: #c0392b;
+}
+
+.employee-form {
+  background-color: #ecf0f1;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.employee-form h4 {
+  margin-top: 0;
+  color: #2c3e50;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  margin-bottom: 0.5rem;
+  color: #2c3e50;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.form-group input {
+  padding: 0.5rem;
+  border: 1px solid #bdc3c7;
+  border-radius: 4px;
+  font-size: 0.95rem;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #3498db;
+}

@@ -1,0 +1,235 @@
+.reports {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.reports-header {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.report-controls {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.report-selector {
+  display: flex;
+  gap: 5px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.btn-tab {
+  padding: 10px 20px;
+  border: none;
+  background: white;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+  transition: all 0.2s;
+}
+
+.btn-tab:hover {
+  background: #f5f5f5;
+}
+
+.btn-tab.active {
+  background: #2196F3;
+  color: white;
+}
+
+.report-date {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.report-date label {
+  font-weight: 500;
+  color: #555;
+}
+
+.report-date input {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.report-content {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 30px;
+  min-height: 600px;
+}
+
+.report-title {
+  text-align: center;
+  margin-bottom: 40px;
+  border-bottom: 2px solid #333;
+  padding-bottom: 20px;
+}
+
+.report-title h2 {
+  margin: 0 0 10px 0;
+  font-size: 24px;
+  color: #333;
+}
+
+.company-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: #555;
+  margin: 5px 0;
+}
+
+.report-date-display {
+  font-size: 14px;
+  color: #777;
+  margin: 5px 0;
+}
+
+.report-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+}
+
+.report-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.report-column > h3 {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 20px;
+  color: #333;
+  border-bottom: 1px solid #333;
+  padding-bottom: 8px;
+}
+
+.report-section {
+  margin-bottom: 25px;
+}
+
+.report-section h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #555;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.report-table td {
+  padding: 6px 8px;
+  font-size: 13px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.report-table .account-number {
+  width: 60px;
+  color: #2196F3;
+  font-weight: 500;
+}
+
+.report-table .account-name {
+  color: #333;
+}
+
+.report-table .amount {
+  text-align: right;
+  font-family: 'Courier New', monospace;
+  font-weight: 500;
+  width: 100px;
+}
+
+.report-table .subtotal td {
+  padding-top: 10px;
+  padding-bottom: 10px;
+  border-top: 1px solid #333;
+  border-bottom: 1px solid #333;
+  font-weight: 600;
+}
+
+.report-table .total td {
+  padding-top: 15px;
+  padding-bottom: 15px;
+  border-top: 2px solid #333;
+  border-bottom: 3px double #333;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.report-table .category-header td {
+  font-weight: 600;
+  color: #555;
+  padding-top: 15px;
+  background-color: #f9f9f9;
+  border-top: 1px solid #ddd;
+}
+
+.report-table .spacer td {
+  padding: 10px 0;
+  border: none;
+}
+
+.report-total {
+  display: flex;
+  justify-content: space-between;
+  padding: 15px 8px;
+  margin-top: 20px;
+  border-top: 2px solid #333;
+  border-bottom: 3px double #333;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.income-statement {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.income-statement .report-section {
+  margin-bottom: 30px;
+}
+
+@media print {
+  .reports-header {
+    display: none;
+  }
+
+  .report-content {
+    border: none;
+    padding: 0;
+  }
+
+  .btn-primary {
+    display: none;
+  }
+
+  .report-columns {
+    page-break-inside: avoid;
+  }
+
+  .report-section {
+    page-break-inside: avoid;
+  }
+
+  @page {
+    margin: 2cm;
+  }
+}
