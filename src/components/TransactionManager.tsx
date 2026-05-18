@@ -139,6 +139,8 @@ export default function TransactionManager({ companyId }: TransactionManagerProp
                   <th>Account</th>
                   <th>Debit</th>
                   <th>Credit</th>
+                  <th>VAT Rate</th>
+                  <th>VAT Amount</th>
                 </tr>
               </thead>
               <tbody>
@@ -149,6 +151,8 @@ export default function TransactionManager({ companyId }: TransactionManagerProp
                     </td>
                     <td className="amount">{line.debit > 0 ? line.debit.toFixed(2) : ''}</td>
                     <td className="amount">{line.credit > 0 ? line.credit.toFixed(2) : ''}</td>
+                    <td className="amount">{line.vat_rate > 0 ? `${line.vat_rate}%` : ''}</td>
+                    <td className="amount">{line.vat_amount > 0 ? line.vat_amount.toFixed(2) : ''}</td>
                   </tr>
                 ))}
               </tbody>
@@ -163,6 +167,12 @@ export default function TransactionManager({ companyId }: TransactionManagerProp
                   <td className="amount">
                     <strong>
                       {transactionLines.reduce((sum, line) => sum + line.credit, 0).toFixed(2)}
+                    </strong>
+                  </td>
+                  <td></td>
+                  <td className="amount">
+                    <strong>
+                      {transactionLines.reduce((sum, line) => sum + line.vat_amount, 0).toFixed(2)}
                     </strong>
                   </td>
                 </tr>
@@ -206,18 +216,20 @@ interface TransactionLineInput {
   account_id: string;
   debit: string;
   credit: string;
+  vat_rate: string;
+  vat_amount: string;
 }
 
 function TransactionForm({ companyId, accounts, onSave, onCancel }: TransactionFormProps) {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [description, setDescription] = useState('');
   const [lines, setLines] = useState<TransactionLineInput[]>([
-    { account_id: '', debit: '', credit: '' },
-    { account_id: '', debit: '', credit: '' },
+    { account_id: '', debit: '', credit: '', vat_rate: '0', vat_amount: '' },
+    { account_id: '', debit: '', credit: '', vat_rate: '0', vat_amount: '' },
   ]);
 
   const addLine = () => {
-    setLines([...lines, { account_id: '', debit: '', credit: '' }]);
+    setLines([...lines, { account_id: '', debit: '', credit: '', vat_rate: '0', vat_amount: '' }]);
   };
 
   const removeLine = (index: number) => {
@@ -229,6 +241,20 @@ function TransactionForm({ companyId, accounts, onSave, onCancel }: TransactionF
   const updateLine = (index: number, field: keyof TransactionLineInput, value: string) => {
     const newLines = [...lines];
     newLines[index][field] = value;
+    
+    // Auto-calculate VAT amount when amount or VAT rate changes
+    if (field === 'debit' || field === 'credit' || field === 'vat_rate') {
+      const amount = parseFloat(newLines[index].debit || newLines[index].credit || '0');
+      const vatRate = parseFloat(newLines[index].vat_rate || '0');
+      
+      if (amount > 0 && vatRate > 0) {
+        const vatAmount = (amount * vatRate) / 100;
+        newLines[index].vat_amount = vatAmount.toFixed(2);
+      } else {
+        newLines[index].vat_amount = '';
+      }
+    }
+    
     setLines(newLines);
   };
 
@@ -266,6 +292,8 @@ function TransactionForm({ companyId, accounts, onSave, onCancel }: TransactionF
           account_id: parseInt(line.account_id),
           debit: parseFloat(line.debit) || 0,
           credit: parseFloat(line.credit) || 0,
+          vat_rate: parseFloat(line.vat_rate) || 0,
+          vat_amount: parseFloat(line.vat_amount) || 0,
         })),
       });
       onSave();
@@ -306,6 +334,8 @@ function TransactionForm({ companyId, accounts, onSave, onCancel }: TransactionF
               <th>Account</th>
               <th>Debit</th>
               <th>Credit</th>
+              <th>VAT Rate</th>
+              <th>VAT Amount</th>
               <th></th>
             </tr>
           </thead>
@@ -347,6 +377,28 @@ function TransactionForm({ companyId, accounts, onSave, onCancel }: TransactionF
                   />
                 </td>
                 <td>
+                  <select
+                    value={line.vat_rate}
+                    onChange={(e) => updateLine(index, 'vat_rate', e.target.value)}
+                  >
+                    <option value="0">0%</option>
+                    <option value="6">6%</option>
+                    <option value="12">12%</option>
+                    <option value="25">25%</option>
+                  </select>
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={line.vat_amount}
+                    readOnly
+                    placeholder="0.00"
+                    className="vat-amount-readonly"
+                  />
+                </td>
+                <td>
                   {lines.length > 2 && (
                     <button type="button" className="btn-small btn-danger" onClick={() => removeLine(index)}>
                       Remove
@@ -362,9 +414,15 @@ function TransactionForm({ companyId, accounts, onSave, onCancel }: TransactionF
               <td className="amount"><strong>{balance.totalDebit.toFixed(2)}</strong></td>
               <td className="amount"><strong>{balance.totalCredit.toFixed(2)}</strong></td>
               <td></td>
+              <td className="amount">
+                <strong>
+                  {lines.reduce((sum, line) => sum + (parseFloat(line.vat_amount) || 0), 0).toFixed(2)}
+                </strong>
+              </td>
+              <td></td>
             </tr>
             <tr>
-              <td colSpan={4} className={`balance-status ${isBalanced ? 'balanced' : 'unbalanced'}`}>
+              <td colSpan={6} className={`balance-status ${isBalanced ? 'balanced' : 'unbalanced'}`}>
                 {isBalanced ? 'Balanced' : `Out of balance by ${Math.abs(balance.difference).toFixed(2)}`}
               </td>
             </tr>

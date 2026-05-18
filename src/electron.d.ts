@@ -24,7 +24,7 @@ export interface ElectronAPI {
   // Transaction methods
   getTransactions: (companyId: number) => Promise<Transaction[]>;
   getTransactionLines: (transactionId: number) => Promise<TransactionLine[]>;
-  addTransaction: (transaction: { company_id: number; transaction_date: string; description?: string; lines: { account_id: number; debit: number; credit: number }[] }) => Promise<number | null>;
+  addTransaction: (transaction: { company_id: number; transaction_date: string; description?: string; lines: { account_id: number; debit: number; credit: number; vat_rate?: number; vat_amount?: number }[] }) => Promise<number | null>;
   deleteTransaction: (transactionId: number) => Promise<boolean>;
 }
 
@@ -85,6 +85,8 @@ export interface TransactionLine {
   account_name: string;
   debit: number;
   credit: number;
+  vat_rate: number;
+  vat_amount: number;
 }
 
 declare global {

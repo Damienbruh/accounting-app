@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import type { Company, Employee, Document } from '../electron.d';
 import TransactionManager from './TransactionManager';
 import Reports from './Reports';
+import VATReport from './VATReport';
 import './CompanyDetail.css';
 
 interface CompanyDetailProps {
@@ -50,7 +51,14 @@ export default function CompanyDetail({ company, onClose, onUpdate }: CompanyDet
         company_id: company.id,
       });
       if (result) {
-        await loadDocuments();
+        console.log('Upload successful, document ID:', result);
+        // Force state update by clearing and reloading
+        setDocuments([]);
+        // Add a small delay
+        await new Promise(resolve => setTimeout(resolve, 200));
+        const data = await window.electronAPI.getDocuments(company.id);
+        console.log('Reloaded documents:', data);
+        setDocuments(data);
       }
     } catch (error) {
       console.error('Error uploading document:', error);
@@ -295,6 +303,10 @@ export default function CompanyDetail({ company, onClose, onUpdate }: CompanyDet
 
       <div className="employees-section">
         <Reports companyId={company.id} companyName={company.name} />
+      </div>
+
+      <div className="employees-section">
+        <VATReport companyId={company.id} />
       </div>
     </div>
   );

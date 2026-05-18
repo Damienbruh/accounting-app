@@ -84,10 +84,32 @@ async function initDatabase() {
       account_id INTEGER NOT NULL,
       debit DECIMAL(10, 2) DEFAULT 0,
       credit DECIMAL(10, 2) DEFAULT 0,
+      vat_rate DECIMAL(5, 2) DEFAULT 0,
+      vat_amount DECIMAL(10, 2) DEFAULT 0,
       FOREIGN KEY (transaction_id) REFERENCES transactions(id),
       FOREIGN KEY (account_id) REFERENCES accounts(id)
     );
   `);
+  
+  // Migration: Add VAT columns if they don't exist
+  try {
+    const tableInfo = db.exec('PRAGMA table_info(transaction_lines)');
+    if (tableInfo.length > 0) {
+      const columns = tableInfo[0].values.map(row => row[1]); // column names are in index 1
+      
+      if (!columns.includes('vat_rate')) {
+        console.log('Adding vat_rate column to transaction_lines table');
+        db.run('ALTER TABLE transaction_lines ADD COLUMN vat_rate DECIMAL(5, 2) DEFAULT 0');
+      }
+      
+      if (!columns.includes('vat_amount')) {
+        console.log('Adding vat_amount column to transaction_lines table');
+        db.run('ALTER TABLE transaction_lines ADD COLUMN vat_amount DECIMAL(10, 2) DEFAULT 0');
+      }
+    }
+  } catch (error) {
+    console.error('Error running migration:', error);
+  }
   
   db.run(`
     CREATE TABLE IF NOT EXISTS employees (
@@ -297,22 +319,29 @@ ipcMain.handle('get-documents', async (event, companyId) => {
   if (!db) return [];
   // Get document metadata without the file_data blob
   const result = db.exec('SELECT id, company_id, file_name, file_type, file_size, description, category, document_date, created_at FROM documents WHERE company_id = ? ORDER BY created_at DESC', [companyId]);
-  if (result.length === 0) return [];
+  if (result.length === 0) {
+    console.log(`No documents found for company ${companyId}`);
+    return [];
+  }
   
   const columns = result[0].columns;
   const values = result[0].values;
-  return values.map(row => {
+  const documents = values.map(row => {
     const obj = {};
     columns.forEach((col, idx) => {
       obj[col] = row[idx];
     });
     return obj;
   });
+  console.log(`Retrieved ${documents.length} documents for company ${companyId}:`, documents.map(d => d.file_name));
+  return documents;
 });
 
 ipcMain.handle('upload-document', async (event, document) => {
   if (!db) return null;
   const dbPath = path.join(app.getPath('userData'), 'accounting.db');
+  
+  console.log('Upload document requested for company:', document.company_id);
   
   // Show file picker
   const result = await dialog.showOpenDialog(mainWindow, {
@@ -323,13 +352,18 @@ ipcMain.handle('upload-document', async (event, document) => {
     ]
   });
   
-  if (result.canceled) return null;
+  if (result.canceled) {
+    console.log('File selection canceled');
+    return null;
+  }
   
   const filePath = result.filePaths[0];
   const fileName = path.basename(filePath);
   const fileExtension = path.extname(filePath);
   const fileData = fs.readFileSync(filePath);
   const fileSize = fileData.length;
+  
+  console.log(`Uploading file: ${fileName} (${fileSize} bytes) for company ${document.company_id}`);
   
   db.run(
     'INSERT INTO documents (company_id, file_name, file_type, file_size, file_data, description, category, document_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
@@ -347,8 +381,14 @@ ipcMain.handle('upload-document', async (event, document) => {
   
   saveDatabase(dbPath);
   
-  const insertResult = db.exec('SELECT last_insert_rowid() as id');
-  return insertResult[0].values[0][0];
+  // Get the ID of the just-inserted document
+  const insertResult = db.exec(
+    'SELECT id FROM documents WHERE company_id = ? AND file_name = ? ORDER BY id DESC LIMIT 1',
+    [document.company_id, fileName]
+  );
+  const documentId = insertResult[0].values[0][0];
+  console.log(`Document uploaded successfully with ID: ${documentId}`);
+  return documentId;
 });
 
 ipcMain.handle('download-document', async (event, documentId) => {
@@ -488,8 +528,15 @@ ipcMain.handle('add-transaction', async (event, transaction) => {
     if (transaction.lines && transaction.lines.length > 0) {
       transaction.lines.forEach(line => {
         db.run(
-          'INSERT INTO transaction_lines (transaction_id, account_id, debit, credit) VALUES (?, ?, ?, ?)',
-          [transactionId, line.account_id, line.debit || 0, line.credit || 0]
+          'INSERT INTO transaction_lines (transaction_id, account_id, debit, credit, vat_rate, vat_amount) VALUES (?, ?, ?, ?, ?, ?)',
+          [
+            transactionId,
+            line.account_id,
+            line.debit || 0,
+            line.credit || 0,
+            line.vat_rate || 0,
+            line.vat_amount || 0
+          ]
         );
       });
     }

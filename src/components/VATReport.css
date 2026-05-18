@@ -1,0 +1,146 @@
+.vat-report {
+  padding: 20px;
+}
+
+.report-header {
+  margin-bottom: 30px;
+}
+
+.report-header h3 {
+  margin-bottom: 20px;
+}
+
+.date-range {
+  display: flex;
+  gap: 15px;
+  align-items: flex-end;
+}
+
+.date-range .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.date-range .form-group label {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.date-range .form-group input {
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.report-content {
+  margin-top: 30px;
+}
+
+.print-header {
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.print-header h2 {
+  margin-bottom: 10px;
+}
+
+.print-header p {
+  color: #666;
+}
+
+.vat-summary {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.vat-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 30px;
+}
+
+.vat-table th,
+.vat-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+.vat-table th {
+  background-color: #f5f5f5;
+  font-weight: 600;
+}
+
+.vat-table .amount {
+  text-align: right;
+  font-family: monospace;
+}
+
+.vat-table .amount.positive {
+  color: #16a34a;
+}
+
+.vat-table .amount.negative {
+  color: #dc2626;
+}
+
+.vat-table tfoot tr {
+  border-top: 2px solid #333;
+  font-size: 1.1rem;
+}
+
+.vat-table .total-row td {
+  padding: 15px 12px;
+  background-color: #f9f9f9;
+}
+
+.vat-notes {
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 20px;
+  margin-bottom: 30px;
+}
+
+.vat-notes h4 {
+  margin-top: 0;
+  margin-bottom: 12px;
+  color: #374151;
+}
+
+.vat-notes ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.vat-notes li {
+  margin-bottom: 8px;
+  color: #6b7280;
+}
+
+.report-placeholder {
+  text-align: center;
+  padding: 60px 20px;
+  color: #666;
+  font-size: 1.1rem;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  .vat-report {
+    padding: 0;
+  }
+
+  .print-header {
+    page-break-after: avoid;
+  }
+
+  .vat-table {
+    page-break-inside: avoid;
+  }
+}
