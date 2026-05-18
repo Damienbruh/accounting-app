@@ -28,4 +28,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getTransactionLines: (transactionId) => ipcRenderer.invoke('get-transaction-lines', transactionId),
   addTransaction: (transaction) => ipcRenderer.invoke('add-transaction', transaction),
   deleteTransaction: (transactionId) => ipcRenderer.invoke('delete-transaction', transactionId),
+  
+  // SIE Export
+  exportSIE: (params) => ipcRenderer.invoke('export-sie', params),
+  
+  // SIE Import
+  importSIE: (params) => ipcRenderer.invoke('import-sie', params),
 });

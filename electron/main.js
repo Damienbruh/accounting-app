@@ -3,6 +3,8 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const initSqlJs = require('sql.js');
+const { generateSIE } = require('./sie-generator');
+const { parseSIE, validateSIE } = require('./sie-parser');
 
 let mainWindow;
 let db;
@@ -565,6 +567,270 @@ ipcMain.handle('delete-transaction', async (event, transactionId) => {
   } catch (error) {
     console.error('Error deleting transaction:', error);
     return false;
+  }
+});
+
+// SIE Import handler
+ipcMain.handle('import-sie', async (event, { companyId, createNewCompany }) => {
+  if (!db) return { success: false, error: 'Database not initialized' };
+  const dbPath = path.join(app.getPath('userData'), 'accounting.db');
+  
+  try {
+    // Show open file dialog
+    const openResult = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openFile'],
+      filters: [
+        { name: 'SIE Files', extensions: ['se'] },
+        { name: 'All Files', extensions: ['*'] }
+      ]
+    });
+    
+    if (openResult.canceled) {
+      return { success: false, error: 'Import canceled' };
+    }
+    
+    const filePath = openResult.filePaths[0];
+    console.log(`Importing SIE file from: ${filePath}`);
+    
+    // Read and parse SIE file with proper encoding handling
+    const fileBuffer = fs.readFileSync(filePath);
+    // Decode latin1 buffer to proper UTF-8 string
+    const fileContent = Buffer.from(fileBuffer.toString('binary'), 'binary').toString('latin1');
+    const parsedData = parseSIE(fileContent);
+    
+    // Validate parsed data
+    const validation = validateSIE(parsedData);
+    if (!validation.valid) {
+      return { success: false, error: `Invalid SIE file: ${validation.errors.join(', ')}` };
+    }
+    
+    let targetCompanyId = companyId;
+    
+    // Create new company if requested
+    if (createNewCompany) {
+      db.run(
+        'INSERT INTO companies (name, org_number) VALUES (?, ?)',
+        [parsedData.company.name, parsedData.company.org_number || null]
+      );
+      
+      const result = db.exec('SELECT last_insert_rowid() as id');
+      targetCompanyId = result[0].values[0][0];
+      console.log(`Created new company with ID: ${targetCompanyId}`);
+    }
+    
+    // Import accounts
+    let accountsImported = 0;
+    const accountMap = {}; // Maps account_number to account_id
+    
+    for (const account of parsedData.accounts) {
+      // Check if account already exists
+      const existingResult = db.exec(
+        'SELECT id FROM accounts WHERE company_id = ? AND account_number = ?',
+        [targetCompanyId, account.account_number]
+      );
+      
+      if (existingResult.length > 0 && existingResult[0].values.length > 0) {
+        // Account exists, use existing ID
+        accountMap[account.account_number] = existingResult[0].values[0][0];
+      } else {
+        // Insert new account
+        db.run(
+          'INSERT INTO accounts (company_id, account_number, account_name, account_type) VALUES (?, ?, ?, ?)',
+          [targetCompanyId, account.account_number, account.account_name, account.account_type]
+        );
+        
+        const result = db.exec('SELECT last_insert_rowid() as id');
+        accountMap[account.account_number] = result[0].values[0][0];
+        accountsImported++;
+      }
+    }
+    
+    // Import transactions
+    let transactionsImported = 0;
+    
+    for (const transaction of parsedData.transactions) {
+      // Check for duplicate transaction by date + description
+      const duplicateCheck = db.exec(
+        'SELECT id FROM transactions WHERE company_id = ? AND transaction_date = ? AND description = ?',
+        [targetCompanyId, transaction.transaction_date, transaction.description]
+      );
+      
+      if (duplicateCheck.length > 0 && duplicateCheck[0].values.length > 0) {
+        console.log(`Skipping duplicate transaction: ${transaction.description} on ${transaction.transaction_date}`);
+        continue;
+      }
+      
+      // Insert transaction
+      db.run(
+        'INSERT INTO transactions (company_id, transaction_date, description) VALUES (?, ?, ?)',
+        [targetCompanyId, transaction.transaction_date, transaction.description]
+      );
+      
+      const result = db.exec('SELECT last_insert_rowid() as id');
+      const transactionId = result[0].values[0][0];
+      
+      // Insert transaction lines
+      for (const line of transaction.lines) {
+        const accountId = accountMap[line.account_number];
+        if (!accountId) {
+          console.warn(`Account number ${line.account_number} not found, skipping line`);
+          continue;
+        }
+        
+        db.run(
+          'INSERT INTO transaction_lines (transaction_id, account_id, debit, credit, vat_rate, vat_amount) VALUES (?, ?, ?, ?, ?, ?)',
+          [
+            transactionId,
+            accountId,
+            line.debit || 0,
+            line.credit || 0,
+            0, // VAT data not typically in SIE files
+            0
+          ]
+        );
+      }
+      
+      transactionsImported++;
+    }
+    
+    // Handle SIE 5 opening and closing balances
+    // Note: Balances are informational - they show account states
+    // We log them but don't create separate transactions for them
+    let balancesInfo = '';
+    if (parsedData.openingBalances.length > 0 || parsedData.closingBalances.length > 0) {
+      balancesInfo = ` (${parsedData.openingBalances.length} opening balances, ${parsedData.closingBalances.length} closing balances)`;
+      console.log(`SIE 5 file contains balances: ${parsedData.openingBalances.length} opening, ${parsedData.closingBalances.length} closing`);
+    }
+    
+    saveDatabase(dbPath);
+    
+    const sieTypeLabel = parsedData.sieType ? `SIE Type ${parsedData.sieType}` : 'SIE';
+    console.log(`Import complete from ${sieTypeLabel}: ${accountsImported} accounts, ${transactionsImported} transactions${balancesInfo}`);
+    return {
+      success: true,
+      summary: {
+        accounts: accountsImported,
+        transactions: transactionsImported,
+        companyName: parsedData.company.name,
+        companyId: targetCompanyId,
+        sieType: parsedData.sieType,
+        hasBalances: parsedData.openingBalances.length > 0 || parsedData.closingBalances.length > 0
+      }
+    };
+    
+  } catch (error) {
+    console.error('Error importing SIE:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// SIE Export handler
+ipcMain.handle('export-sie', async (event, { companyId, startDate, endDate }) => {
+  if (!db) return { success: false, error: 'Database not initialized' };
+  
+  try {
+    // Get company information
+    const companyResult = db.exec('SELECT * FROM companies WHERE id = ?', [companyId]);
+    if (companyResult.length === 0) {
+      return { success: false, error: 'Company not found' };
+    }
+    
+    const companyData = {};
+    const companyCols = companyResult[0].columns;
+    const companyVals = companyResult[0].values[0];
+    companyCols.forEach((col, idx) => {
+      companyData[col] = companyVals[idx];
+    });
+    
+    // Get accounts
+    const accountsResult = db.exec(
+      'SELECT * FROM accounts WHERE company_id = ? ORDER BY account_number',
+      [companyId]
+    );
+    const accounts = [];
+    if (accountsResult.length > 0) {
+      const cols = accountsResult[0].columns;
+      accountsResult[0].values.forEach(row => {
+        const acc = {};
+        cols.forEach((col, idx) => {
+          acc[col] = row[idx];
+        });
+        accounts.push(acc);
+      });
+    }
+    
+    // Get transactions with their lines in the date range
+    const transactionsResult = db.exec(
+      'SELECT * FROM transactions WHERE company_id = ? AND transaction_date >= ? AND transaction_date <= ? ORDER BY transaction_date, id',
+      [companyId, startDate, endDate]
+    );
+    
+    const transactions = [];
+    if (transactionsResult.length > 0) {
+      const cols = transactionsResult[0].columns;
+      for (const row of transactionsResult[0].values) {
+        const trans = {};
+        cols.forEach((col, idx) => {
+          trans[col] = row[idx];
+        });
+        
+        // Get transaction lines with account numbers
+        const linesResult = db.exec(
+          `SELECT tl.*, a.account_number, a.account_name
+           FROM transaction_lines tl
+           JOIN accounts a ON tl.account_id = a.id
+           WHERE tl.transaction_id = ?`,
+          [trans.id]
+        );
+        
+        trans.lines = [];
+        if (linesResult.length > 0) {
+          const lineCols = linesResult[0].columns;
+          linesResult[0].values.forEach(lineRow => {
+            const line = {};
+            lineCols.forEach((col, idx) => {
+              line[col] = lineRow[idx];
+            });
+            trans.lines.push(line);
+          });
+        }
+        
+        transactions.push(trans);
+      }
+    }
+    
+    // Generate SIE content
+    const sieContent = generateSIE({
+      company: companyData,
+      accounts,
+      transactions,
+      startDate,
+      endDate
+    });
+    
+    // Show save dialog
+    const suggestedFileName = `${companyData.name.replace(/[^a-z0-9]/gi, '_')}_${startDate}_${endDate}.se`;
+    const saveResult = await dialog.showSaveDialog(mainWindow, {
+      defaultPath: suggestedFileName,
+      filters: [
+        { name: 'SIE Files', extensions: ['se'] },
+        { name: 'All Files', extensions: ['*'] }
+      ]
+    });
+    
+    if (saveResult.canceled) {
+      return { success: false, error: 'Export canceled' };
+    }
+    
+    // Write SIE file
+    fs.writeFileSync(saveResult.filePath, sieContent, 'latin1');
+    
+    console.log(`SIE file exported successfully to: ${saveResult.filePath}`);
+    return { success: true, filePath: saveResult.filePath };
+    
+  } catch (error) {
+    console.error('Error exporting SIE:', error);
+    return { success: false, error: error.message };
   }
 });
 

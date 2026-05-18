@@ -26,6 +26,12 @@ export interface ElectronAPI {
   getTransactionLines: (transactionId: number) => Promise<TransactionLine[]>;
   addTransaction: (transaction: { company_id: number; transaction_date: string; description?: string; lines: { account_id: number; debit: number; credit: number; vat_rate?: number; vat_amount?: number }[] }) => Promise<number | null>;
   deleteTransaction: (transactionId: number) => Promise<boolean>;
+  
+  // SIE Export
+  exportSIE: (params: { companyId: number; startDate: string; endDate: string }) => Promise<{ success: boolean; filePath?: string; error?: string }>;
+  
+  // SIE Import
+  importSIE: (params: { companyId?: number; createNewCompany?: boolean }) => Promise<{ success: boolean; summary?: { accounts: number; transactions: number; companyName: string; companyId: number }; error?: string }>;
 }
 
 export interface Company {

@@ -3,6 +3,8 @@ import type { Company, Employee, Document } from '../electron.d';
 import TransactionManager from './TransactionManager';
 import Reports from './Reports';
 import VATReport from './VATReport';
+import SIEExport from './SIEExport';
+import SIEImport from './SIEImport';
 import './CompanyDetail.css';
 
 interface CompanyDetailProps {
@@ -307,6 +309,21 @@ export default function CompanyDetail({ company, onClose, onUpdate }: CompanyDet
 
       <div className="employees-section">
         <VATReport companyId={company.id} />
+      </div>
+
+      <div className="employees-section">
+        <SIEImport 
+          companyId={company.id} 
+          companyName={company.name}
+          onImportComplete={() => {
+            loadDocuments();
+            onUpdate();
+          }}
+        />
+      </div>
+
+      <div className="employees-section">
+        <SIEExport companyId={company.id} companyName={company.name} />
       </div>
     </div>
   );

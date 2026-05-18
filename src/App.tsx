@@ -48,6 +48,31 @@ function App() {
     }
   };
 
+  const handleImportSIE = async () => {
+    if (!window.electronAPI) {
+      alert('This feature is only available in the desktop app');
+      return;
+    }
+
+    try {
+      const result = await window.electronAPI.importSIE({
+        createNewCompany: true
+      });
+
+      if (result.success && result.summary) {
+        const { accounts, transactions, companyName, sieType } = result.summary;
+        const typeLabel = sieType ? ` (SIE Type ${sieType})` : '';
+        alert(`Successfully imported company "${companyName}"${typeLabel}\n\n${transactions} transactions and ${accounts} new accounts imported.`);
+        await loadCompanies();
+      } else if (result.error && result.error !== 'Import canceled') {
+        alert(`Import failed: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error importing SIE:', error);
+      alert('Failed to import SIE file');
+    }
+  };
+
   return (
     <div className="app">
       <header className="app-header">
@@ -110,9 +135,14 @@ function App() {
         {activeTab === 'companies' && (
           <div className="content">
             <h2>Companies</h2>
-            <button className="btn-primary" onClick={() => setShowCompanyForm(true)}>
-              Add Company
-            </button>
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '1rem' }}>
+              <button className="btn-primary" onClick={() => setShowCompanyForm(true)}>
+                Add Company
+              </button>
+              <button className="btn-import" onClick={handleImportSIE}>
+                Import from SIE File
+              </button>
+            </div>
             {companies.length === 0 ? (
               <p>No companies yet. Add your first company to get started.</p>
             ) : (

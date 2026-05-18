@@ -1,0 +1,90 @@
+.sie-export {
+  margin-bottom: 2rem;
+}
+
+.sie-export h3 {
+  margin: 0 0 0.5rem 0;
+  color: #2c3e50;
+}
+
+.sie-description {
+  color: #7f8c8d;
+  font-size: 0.95rem;
+  margin-bottom: 1.5rem;
+}
+
+.sie-form {
+  background-color: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.sie-form .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.sie-form .form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.sie-form .form-group label {
+  margin-bottom: 0.5rem;
+  color: #2c3e50;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.sie-form .form-group input {
+  padding: 0.5rem;
+  border: 1px solid #bdc3c7;
+  border-radius: 4px;
+  font-size: 0.95rem;
+}
+
+.sie-form .form-group input:disabled {
+  background-color: #ecf0f1;
+  cursor: not-allowed;
+}
+
+.sie-form button {
+  margin-top: 0.5rem;
+}
+
+.sie-form button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.sie-info {
+  background-color: #e8f4f8;
+  border-left: 4px solid #3498db;
+  padding: 1rem 1.5rem;
+  border-radius: 4px;
+}
+
+.sie-info h4 {
+  margin: 0 0 0.75rem 0;
+  color: #2c3e50;
+  font-size: 1rem;
+}
+
+.sie-info ul {
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.sie-info li {
+  margin-bottom: 0.5rem;
+  color: #34495e;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.sie-info li:last-child {
+  margin-bottom: 0;
+}
