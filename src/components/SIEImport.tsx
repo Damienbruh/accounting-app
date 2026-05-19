@@ -1,6 +1,15 @@
 import { useState } from 'react';
 import './SIEImport.css';
 
+interface SkippedTransaction {
+  description: string;
+  transaction_date: string;
+  totalDebit: number;
+  totalCredit: number;
+  difference: number;
+  lines: Array<{ account_number: number; debit: number; credit: number }>;
+}
+
 interface SIEImportProps {
   companyId: number;
   companyName: string;
@@ -11,6 +20,7 @@ export default function SIEImport({ companyId, companyName, onImportComplete }: 
   const [importMode, setImportMode] = useState<'existing' | 'new'>('existing');
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [skippedTransactions, setSkippedTransactions] = useState<SkippedTransaction[]>([]);
 
   const handleImport = async () => {
     if (!window.electronAPI) return;
@@ -25,13 +35,21 @@ export default function SIEImport({ companyId, companyName, onImportComplete }: 
       });
 
       if (importResult.success && importResult.summary) {
-        const { accounts, transactions, companyName: importedCompanyName, sieType, hasBalances } = importResult.summary;
+        const { accounts, transactions, companyName: importedCompanyName, sieType, hasBalances, skippedTransactions: skipped } = importResult.summary;
         const typeLabel = sieType ? ` (SIE Type ${sieType})` : '';
         const balancesNote = hasBalances ? ' Note: SIE 5 balance information was detected.' : '';
+        const skippedNote = skipped && skipped.length > 0 ? ` Warning: ${skipped.length} unbalanced transactions were skipped.` : '';
+        
         setResult({
-          type: 'success',
-          message: `Successfully imported ${transactions} transactions and ${accounts} new accounts from "${importedCompanyName}"${typeLabel}.${balancesNote}`
+          type: skipped && skipped.length > 0 ? 'error' : 'success',
+          message: `Successfully imported ${transactions} transactions and ${accounts} new accounts from "${importedCompanyName}"${typeLabel}.${balancesNote}${skippedNote}`
         });
+        
+        if (skipped && skipped.length > 0) {
+          setSkippedTransactions(skipped);
+        } else {
+          setSkippedTransactions([]);
+        }
         
         if (onImportComplete) {
           onImportComplete();
@@ -100,6 +118,31 @@ export default function SIEImport({ companyId, companyName, onImportComplete }: 
         {result && (
           <div className={`import-result ${result.type}`}>
             {result.message}
+          </div>
+        )}
+        
+        {skippedTransactions.length > 0 && (
+          <div className="skipped-transactions">
+            <h4>Unbalanced Transactions</h4>
+            <p className="warning-text">
+              The following transactions were skipped because they are unbalanced. 
+              You may need to manually add or fix these transactions:
+            </p>
+            <div className="skipped-list">
+              {skippedTransactions.map((trans, index) => (
+                <div key={index} className="skipped-item">
+                  <div className="trans-header">
+                    <strong>{trans.description || 'Untitled'}</strong>
+                    <span className="trans-date">{trans.transaction_date}</span>
+                  </div>
+                  <div className="trans-balance">
+                    <span>Debit: {trans.totalDebit.toFixed(2)} SEK</span>
+                    <span>Credit: {trans.totalCredit.toFixed(2)} SEK</span>
+                    <span className="difference">Difference: {trans.difference.toFixed(2)} SEK</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>

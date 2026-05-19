@@ -10,7 +10,8 @@
     "electron:build": "npm run build && electron-builder",
     "start": "npm run dev",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "clear-db": "electron scripts/clear-database.js"
   },
   "keywords": [],
   "author": "",
@@ -33,7 +34,8 @@
   "dependencies": {
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "sql.js": "^1.14.1"
+    "sql.js": "^1.14.1",
+    "xlsx": "^0.18.5"
   },
   "build": {
     "appId": "com.accounting.app",
@@ -49,7 +51,8 @@
       "output": "release"
     },
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "signAndEditExecutable": false
     }
   }
 }

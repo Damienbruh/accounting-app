@@ -1,0 +1,385 @@
+.excel-import {
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+.excel-import-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.excel-import-header h3 {
+  margin: 0;
+  color: #333;
+}
+
+.load-button {
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.load-button:hover {
+  background-color: #0056b3;
+}
+
+.load-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.excel-message {
+  padding: 12px 16px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.excel-message.success {
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  color: #155724;
+}
+
+.excel-message.error {
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  color: #721c24;
+}
+
+.excel-message.info {
+  background-color: #d1ecf1;
+  border: 1px solid #bee5eb;
+  color: #0c5460;
+}
+
+.close-message {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 10px;
+  color: inherit;
+}
+
+/* Grouping Mode Selector */
+.grouping-mode-selector {
+  background-color: white;
+  padding: 15px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  border: 1px solid #ddd;
+}
+
+.mode-label {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 10px;
+  display: block;
+}
+
+.mode-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mode-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.mode-option:hover {
+  background-color: #f0f0f0;
+}
+
+.mode-option input[type="radio"] {
+  cursor: pointer;
+}
+
+.mode-option span {
+  font-size: 14px;
+  color: #555;
+}
+
+/* Column Mapping */
+.column-mapping {
+  background-color: white;
+  padding: 20px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  border: 1px solid #ddd;
+}
+
+.column-mapping h4 {
+  margin: 0 0 10px 0;
+  color: #333;
+}
+
+.mapping-description {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 15px;
+}
+
+.mapping-row {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 15px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.mapping-label {
+  font-size: 14px;
+  color: #555;
+  font-weight: 500;
+}
+
+.mapping-label .required {
+  color: #dc3545;
+  margin-left: 4px;
+}
+
+.mapping-select {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  background-color: white;
+  cursor: pointer;
+}
+
+.mapping-select:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+/* Preview Section */
+.preview-section {
+  background-color: white;
+  padding: 20px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  border: 1px solid #ddd;
+}
+
+.preview-section h4 {
+  margin: 0 0 10px 0;
+  color: #333;
+}
+
+.preview-description {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 15px;
+}
+
+.preview-table-container {
+  overflow-x: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.preview-table thead {
+  background-color: #f8f9fa;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.preview-table th {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 2px solid #ddd;
+  font-weight: 600;
+  color: #333;
+  white-space: nowrap;
+}
+
+.preview-table .header-text {
+  font-size: 11px;
+  color: #666;
+  font-weight: normal;
+  display: block;
+  margin-top: 4px;
+}
+
+.preview-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #eee;
+  color: #555;
+}
+
+.preview-table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+.row-number {
+  color: #999;
+  font-weight: 500;
+  background-color: #f8f9fa;
+  text-align: center;
+}
+
+.empty-cell {
+  color: #ccc;
+  font-style: italic;
+}
+
+/* Import Actions */
+.import-actions {
+  background-color: white;
+  padding: 20px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  border: 1px solid #ddd;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.import-button {
+  padding: 12px 30px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.import-button:hover {
+  background-color: #218838;
+}
+
+.import-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.validation-message {
+  font-size: 14px;
+  color: #dc3545;
+  margin: 0;
+}
+
+/* Import Errors */
+.import-errors {
+  background-color: #fff3cd;
+  padding: 15px;
+  border-radius: 6px;
+  border: 1px solid #ffc107;
+}
+
+.import-errors h4 {
+  margin: 0 0 10px 0;
+  color: #856404;
+}
+
+.error-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.error-item {
+  padding: 8px 12px;
+  background-color: white;
+  border-left: 3px solid #dc3545;
+  margin-bottom: 8px;
+  border-radius: 3px;
+  font-size: 14px;
+  color: #721c24;
+}
+
+.error-item strong {
+  color: #dc3545;
+}
+
+/* Empty State */
+.empty-state {
+  background-color: white;
+  padding: 40px;
+  border-radius: 6px;
+  text-align: center;
+  border: 2px dashed #ddd;
+}
+
+.empty-state > p {
+  font-size: 16px;
+  color: #666;
+  margin-bottom: 30px;
+}
+
+.instructions {
+  text-align: left;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.instructions h4 {
+  color: #333;
+  margin: 20px 0 10px 0;
+  font-size: 16px;
+}
+
+.instructions ul {
+  color: #555;
+  line-height: 1.6;
+  padding-left: 20px;
+}
+
+.instructions li {
+  margin-bottom: 8px;
+}
+
+/* Scrollbar styling */
+.preview-table-container::-webkit-scrollbar,
+.error-list::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.preview-table-container::-webkit-scrollbar-track,
+.error-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.preview-table-container::-webkit-scrollbar-thumb,
+.error-list::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.preview-table-container::-webkit-scrollbar-thumb:hover,
+.error-list::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}

@@ -5,6 +5,8 @@ import Reports from './Reports';
 import VATReport from './VATReport';
 import SIEExport from './SIEExport';
 import SIEImport from './SIEImport';
+import BankReconciliation from './BankReconciliation';
+import ExcelImport from './ExcelImport';
 import './CompanyDetail.css';
 
 interface CompanyDetailProps {
@@ -324,6 +326,14 @@ export default function CompanyDetail({ company, onClose, onUpdate }: CompanyDet
 
       <div className="employees-section">
         <SIEExport companyId={company.id} companyName={company.name} />
+      </div>
+
+      <div className="employees-section">
+        <BankReconciliation companyId={company.id} />
+      </div>
+
+      <div className="employees-section">
+        <ExcelImport companyId={company.id} onImportComplete={onUpdate} />
       </div>
     </div>
   );

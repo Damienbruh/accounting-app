@@ -34,4 +34,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // SIE Import
   importSIE: (params) => ipcRenderer.invoke('import-sie', params),
+  
+  // Reports
+  getProfitLoss: (params) => ipcRenderer.invoke('get-profit-loss', params),
+  getBalanceSheet: (params) => ipcRenderer.invoke('get-balance-sheet', params),
+  getCashFlow: (params) => ipcRenderer.invoke('get-cash-flow', params),
+  
+  // Bank Reconciliation
+  importBankStatement: (params) => ipcRenderer.invoke('import-bank-statement', params),
+  getBankTransactions: (params) => ipcRenderer.invoke('get-bank-transactions', params),
+  matchTransaction: (params) => ipcRenderer.invoke('match-transaction', params),
+  unmatchTransaction: (params) => ipcRenderer.invoke('unmatch-transaction', params),
+  getUnreconciledTransactions: (params) => ipcRenderer.invoke('get-unreconciled-transactions', params),
+  
+  // Excel Import
+  readExcelFile: () => ipcRenderer.invoke('read-excel-file'),
+  importExcelTransactions: (params) => ipcRenderer.invoke('import-excel-transactions', params),
 });

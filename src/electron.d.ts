@@ -30,8 +30,43 @@ export interface ElectronAPI {
   // SIE Export
   exportSIE: (params: { companyId: number; startDate: string; endDate: string }) => Promise<{ success: boolean; filePath?: string; error?: string }>;
   
+  // Reports
+  getProfitLoss: (params: { companyId: number; startDate: string; endDate: string }) => Promise<{ success: boolean; report?: any; error?: string }>;
+  getBalanceSheet: (params: { companyId: number; asOfDate: string }) => Promise<{ success: boolean; report?: any; error?: string }>;
+  getCashFlow: (params: { companyId: number; startDate: string; endDate: string }) => Promise<{ success: boolean; report?: any; error?: string }>;
+  
   // SIE Import
-  importSIE: (params: { companyId?: number; createNewCompany?: boolean }) => Promise<{ success: boolean; summary?: { accounts: number; transactions: number; companyName: string; companyId: number }; error?: string }>;
+  importSIE: (params: { companyId?: number; createNewCompany?: boolean }) => Promise<{ 
+    success: boolean; 
+    summary?: { 
+      accounts: number; 
+      transactions: number; 
+      companyName: string; 
+      companyId: number;
+      sieType?: number;
+      hasBalances?: boolean;
+      skippedTransactions?: Array<{
+        description: string;
+        transaction_date: string;
+        totalDebit: number;
+        totalCredit: number;
+        difference: number;
+        lines: Array<{ account_number: number; debit: number; credit: number }>;
+      }>;
+    }; 
+    error?: string 
+  }>;
+  
+  // Bank Reconciliation
+  importBankStatement: (params: { companyId: number }) => Promise<{ success: boolean; imported?: number; format?: string; error?: string }>;
+  getBankTransactions: (params: { companyId: number; startDate?: string; endDate?: string }) => Promise<{ success: boolean; transactions?: BankTransaction[]; error?: string }>;
+  matchTransaction: (params: { bankTransactionId: number; accountingTransactionId: number }) => Promise<{ success: boolean; error?: string }>;
+  unmatchTransaction: (params: { bankTransactionId: number }) => Promise<{ success: boolean; error?: string }>;
+  getUnreconciledTransactions: (params: { companyId: number; startDate?: string; endDate?: string }) => Promise<{ success: boolean; transactions?: UnreconciledTransaction[]; error?: string }>;
+  
+  // Excel Import
+  readExcelFile: () => Promise<ExcelParseResult>;
+  importExcelTransactions: (params: { companyId: number; rows: any[][]; mapping: ExcelColumnMapping; groupingMode: 'single-row' | 'multi-row' }) => Promise<{ success: boolean; imported?: number; totalProcessed?: number; errors?: ExcelImportError[]; error?: string }>;
 }
 
 export interface Company {
@@ -93,6 +128,64 @@ export interface TransactionLine {
   credit: number;
   vat_rate: number;
   vat_amount: number;
+}
+
+export interface BankTransaction {
+  id: number;
+  company_id: number;
+  transaction_date: string;
+  description: string;
+  amount: number;
+  balance?: number;
+  reference?: string;
+  reconciled: number;
+  matched_transaction_id?: number;
+  matched_description?: string;
+  matched_date?: string;
+  created_at: string;
+}
+
+export interface UnreconciledTransaction {
+  id: number;
+  transaction_date: string;
+  description: string;
+  credit_total: number;
+  debit_total: number;
+}
+
+export interface ExcelParseResult {
+  success: boolean;
+  sheetNames?: string[];
+  selectedSheet?: string;
+  headers?: string[];
+  columnCount?: number;
+  totalRows?: number;
+  previewRows?: any[][];
+  allRows?: any[][];
+  error?: string;
+}
+
+export interface ExcelColumnMapping {
+  // For single-row mode
+  date?: number;
+  description?: number;
+  debitAccount?: number;
+  creditAccount?: number;
+  amount?: number;
+  
+  // For multi-row mode
+  account?: number;
+  debit?: number;
+  credit?: number;
+  transactionId?: number;
+}
+
+export interface ExcelImportError {
+  row?: number;
+  group?: string;
+  transaction?: string;
+  error: string;
+  data?: any;
 }
 
 declare global {

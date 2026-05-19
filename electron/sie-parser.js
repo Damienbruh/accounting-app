@@ -107,7 +107,8 @@ function parseSIE(content) {
       end: ''
     },
     openingBalances: [],  // SIE 5: #IB (Ingående balans)
-    closingBalances: []   // SIE 5: #UB (Utgående balans)
+    closingBalances: [],   // SIE 5: #UB (Utgående balans)
+    skippedTransactions: []  // Unbalanced transactions that were skipped
   };
 
   let currentTransaction = null;
@@ -228,13 +229,22 @@ function parseSIE(content) {
       inVerification = false;
       if (currentTransaction) {
         // Validate transaction is balanced
+        // Use higher tolerance for real-world rounding errors from other systems
         const totalDebit = currentTransaction.lines.reduce((sum, line) => sum + line.debit, 0);
         const totalCredit = currentTransaction.lines.reduce((sum, line) => sum + line.credit, 0);
+        const difference = Math.abs(totalDebit - totalCredit);
         
-        if (Math.abs(totalDebit - totalCredit) < 0.01) {
+        // Allow up to 1 SEK difference for rounding errors (common in multi-line transactions)
+        if (difference < 1.0) {
           result.transactions.push(currentTransaction);
         } else {
-          console.warn(`Skipping unbalanced transaction: ${currentTransaction.description} (Debit: ${totalDebit}, Credit: ${totalCredit})`);
+          console.warn(`Skipping unbalanced transaction: ${currentTransaction.description} (Debit: ${totalDebit}, Credit: ${totalCredit}, Difference: ${difference.toFixed(4)})`);
+          result.skippedTransactions.push({
+            ...currentTransaction,
+            totalDebit,
+            totalCredit,
+            difference
+          });
         }
         
         currentTransaction = null;

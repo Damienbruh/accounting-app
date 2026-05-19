@@ -5,6 +5,9 @@ const os = require('os');
 const initSqlJs = require('sql.js');
 const { generateSIE } = require('./sie-generator');
 const { parseSIE, validateSIE } = require('./sie-parser');
+const { generateProfitAndLoss, generateBalanceSheet, generateCashFlow } = require('./reports');
+const { parseCSV } = require('./csv-parser');
+const { parseExcelFile, convertExcelToTransactions } = require('./excel-parser');
 
 let mainWindow;
 let db;
@@ -145,6 +148,43 @@ async function initDatabase() {
       FOREIGN KEY (company_id) REFERENCES companies(id)
     );
   `);
+  
+  db.run(`
+    CREATE TABLE IF NOT EXISTS bank_transactions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      company_id INTEGER NOT NULL,
+      transaction_date DATE NOT NULL,
+      description TEXT NOT NULL,
+      amount DECIMAL(10, 2) NOT NULL,
+      balance DECIMAL(10, 2),
+      reference TEXT,
+      reconciled INTEGER DEFAULT 0,
+      matched_transaction_id INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (company_id) REFERENCES companies(id),
+      FOREIGN KEY (matched_transaction_id) REFERENCES transactions(id)
+    );
+  `);
+  
+  // Migration: Add reconciliation columns to transactions table
+  try {
+    const transTableInfo = db.exec('PRAGMA table_info(transactions)');
+    if (transTableInfo.length > 0) {
+      const columns = transTableInfo[0].values.map(row => row[1]);
+      
+      if (!columns.includes('reconciled')) {
+        console.log('Adding reconciled column to transactions table');
+        db.run('ALTER TABLE transactions ADD COLUMN reconciled INTEGER DEFAULT 0');
+      }
+      
+      if (!columns.includes('bank_transaction_id')) {
+        console.log('Adding bank_transaction_id column to transactions table');
+        db.run('ALTER TABLE transactions ADD COLUMN bank_transaction_id INTEGER');
+      }
+    }
+  } catch (error) {
+    console.error('Error running reconciliation migration:', error);
+  }
 
   // Save database to file
   saveDatabase(dbPath);
@@ -706,6 +746,11 @@ ipcMain.handle('import-sie', async (event, { companyId, createNewCompany }) => {
     
     const sieTypeLabel = parsedData.sieType ? `SIE Type ${parsedData.sieType}` : 'SIE';
     console.log(`Import complete from ${sieTypeLabel}: ${accountsImported} accounts, ${transactionsImported} transactions${balancesInfo}`);
+    
+    if (parsedData.skippedTransactions.length > 0) {
+      console.log(`Warning: ${parsedData.skippedTransactions.length} unbalanced transactions were skipped`);
+    }
+    
     return {
       success: true,
       summary: {
@@ -714,7 +759,8 @@ ipcMain.handle('import-sie', async (event, { companyId, createNewCompany }) => {
         companyName: parsedData.company.name,
         companyId: targetCompanyId,
         sieType: parsedData.sieType,
-        hasBalances: parsedData.openingBalances.length > 0 || parsedData.closingBalances.length > 0
+        hasBalances: parsedData.openingBalances.length > 0 || parsedData.closingBalances.length > 0,
+        skippedTransactions: parsedData.skippedTransactions
       }
     };
     
@@ -830,6 +876,407 @@ ipcMain.handle('export-sie', async (event, { companyId, startDate, endDate }) =>
     
   } catch (error) {
     console.error('Error exporting SIE:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Report handlers
+ipcMain.handle('get-profit-loss', async (event, { companyId, startDate, endDate }) => {
+  if (!db) return { success: false, error: 'Database not initialized' };
+  
+  try {
+    const report = generateProfitAndLoss(db, companyId, startDate, endDate);
+    return { success: true, report };
+  } catch (error) {
+    console.error('Error generating P&L:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('get-balance-sheet', async (event, { companyId, asOfDate }) => {
+  if (!db) return { success: false, error: 'Database not initialized' };
+  
+  try {
+    const report = generateBalanceSheet(db, companyId, asOfDate);
+    return { success: true, report };
+  } catch (error) {
+    console.error('Error generating balance sheet:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('get-cash-flow', async (event, { companyId, startDate, endDate }) => {
+  if (!db) return { success: false, error: 'Database not initialized' };
+  
+  try {
+    const report = generateCashFlow(db, companyId, startDate, endDate);
+    return { success: true, report };
+  } catch (error) {
+    console.error('Error generating cash flow:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Bank reconciliation handlers
+ipcMain.handle('import-bank-statement', async (event, { companyId }) => {
+  if (!db) return { success: false, error: 'Database not initialized' };
+  
+  try {
+    // Show file dialog
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openFile'],
+      filters: [
+        { name: 'CSV Files', extensions: ['csv'] },
+        { name: 'All Files', extensions: ['*'] }
+      ]
+    });
+    
+    if (result.canceled) {
+      return { success: false, error: 'Import canceled' };
+    }
+    
+    const filePath = result.filePaths[0];
+    
+    // Read CSV file
+    const fileContent = fs.readFileSync(filePath, 'utf-8');
+    
+    // Parse CSV
+    const parseResult = parseCSV(fileContent);
+    
+    // Insert into database
+    let imported = 0;
+    for (const transaction of parseResult.transactions) {
+      db.run(
+        `INSERT INTO bank_transactions 
+         (company_id, transaction_date, description, amount, balance, reference, reconciled)
+         VALUES (?, ?, ?, ?, ?, ?, 0)`,
+        [
+          companyId,
+          transaction.transaction_date,
+          transaction.description,
+          transaction.amount,
+          transaction.balance,
+          transaction.reference
+        ]
+      );
+      imported++;
+    }
+    
+    console.log(`Imported ${imported} bank transactions from ${parseResult.format} format`);
+    
+    return {
+      success: true,
+      imported,
+      format: parseResult.format
+    };
+    
+  } catch (error) {
+    console.error('Error importing bank statement:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('get-bank-transactions', async (event, { companyId, startDate, endDate }) => {
+  if (!db) return { success: false, error: 'Database not initialized' };
+  
+  try {
+    let query = `
+      SELECT 
+        bt.*,
+        t.description as matched_description,
+        t.transaction_date as matched_date
+      FROM bank_transactions bt
+      LEFT JOIN transactions t ON bt.matched_transaction_id = t.id
+      WHERE bt.company_id = ?
+    `;
+    
+    const params = [companyId];
+    
+    if (startDate) {
+      query += ' AND bt.transaction_date >= ?';
+      params.push(startDate);
+    }
+    
+    if (endDate) {
+      query += ' AND bt.transaction_date <= ?';
+      params.push(endDate);
+    }
+    
+    query += ' ORDER BY bt.transaction_date DESC, bt.id DESC';
+    
+    const result = db.exec(query, params);
+    
+    if (result.length === 0) {
+      return { success: true, transactions: [] };
+    }
+    
+    const cols = result[0].columns;
+    const transactions = result[0].values.map(row => {
+      const trans = {};
+      cols.forEach((col, idx) => {
+        trans[col] = row[idx];
+      });
+      return trans;
+    });
+    
+    return { success: true, transactions };
+    
+  } catch (error) {
+    console.error('Error fetching bank transactions:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('match-transaction', async (event, { bankTransactionId, accountingTransactionId }) => {
+  if (!db) return { success: false, error: 'Database not initialized' };
+  
+  try {
+    // Update bank transaction
+    db.run(
+      `UPDATE bank_transactions 
+       SET reconciled = 1, matched_transaction_id = ?
+       WHERE id = ?`,
+      [accountingTransactionId, bankTransactionId]
+    );
+    
+    // Update accounting transaction
+    db.run(
+      `UPDATE transactions 
+       SET reconciled = 1, bank_transaction_id = ?
+       WHERE id = ?`,
+      [bankTransactionId, accountingTransactionId]
+    );
+    
+    console.log(`Matched bank transaction ${bankTransactionId} with accounting transaction ${accountingTransactionId}`);
+    
+    return { success: true };
+    
+  } catch (error) {
+    console.error('Error matching transactions:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('unmatch-transaction', async (event, { bankTransactionId }) => {
+  if (!db) return { success: false, error: 'Database not initialized' };
+  
+  try {
+    // Get the matched transaction ID first
+    const result = db.exec(
+      'SELECT matched_transaction_id FROM bank_transactions WHERE id = ?',
+      [bankTransactionId]
+    );
+    
+    if (result.length === 0 || !result[0].values[0][0]) {
+      return { success: false, error: 'No match found to unmatch' };
+    }
+    
+    const accountingTransactionId = result[0].values[0][0];
+    
+    // Update bank transaction
+    db.run(
+      `UPDATE bank_transactions 
+       SET reconciled = 0, matched_transaction_id = NULL
+       WHERE id = ?`,
+      [bankTransactionId]
+    );
+    
+    // Update accounting transaction
+    db.run(
+      `UPDATE transactions 
+       SET reconciled = 0, bank_transaction_id = NULL
+       WHERE id = ?`,
+      [accountingTransactionId]
+    );
+    
+    console.log(`Unmatched bank transaction ${bankTransactionId}`);
+    
+    return { success: true };
+    
+  } catch (error) {
+    console.error('Error unmatching transaction:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('get-unreconciled-transactions', async (event, { companyId, startDate, endDate }) => {
+  if (!db) return { success: false, error: 'Database not initialized' };
+  
+  try {
+    let query = `
+      SELECT 
+        t.id,
+        t.transaction_date,
+        t.description,
+        SUM(CASE WHEN tl.credit > 0 THEN tl.credit ELSE 0 END) as credit_total,
+        SUM(CASE WHEN tl.debit > 0 THEN tl.debit ELSE 0 END) as debit_total
+      FROM transactions t
+      JOIN transaction_lines tl ON t.id = tl.transaction_id
+      WHERE t.company_id = ? AND t.reconciled = 0
+    `;
+    
+    const params = [companyId];
+    
+    if (startDate) {
+      query += ' AND t.transaction_date >= ?';
+      params.push(startDate);
+    }
+    
+    if (endDate) {
+      query += ' AND t.transaction_date <= ?';
+      params.push(endDate);
+    }
+    
+    query += ' GROUP BY t.id ORDER BY t.transaction_date DESC';
+    
+    const result = db.exec(query, params);
+    
+    if (result.length === 0) {
+      return { success: true, transactions: [] };
+    }
+    
+    const cols = result[0].columns;
+    const transactions = result[0].values.map(row => {
+      const trans = {};
+      cols.forEach((col, idx) => {
+        trans[col] = row[idx];
+      });
+      return trans;
+    });
+    
+    return { success: true, transactions };
+    
+  } catch (error) {
+    console.error('Error fetching unreconciled transactions:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Excel import handlers
+ipcMain.handle('read-excel-file', async () => {
+  if (!db) return { success: false, error: 'Database not initialized' };
+  
+  try {
+    // Show file dialog
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openFile'],
+      filters: [
+        { name: 'Excel Files', extensions: ['xlsx', 'xls'] },
+        { name: 'All Files', extensions: ['*'] }
+      ]
+    });
+    
+    if (result.canceled) {
+      return { success: false, error: 'File selection canceled' };
+    }
+    
+    const filePath = result.filePaths[0];
+    
+    // Read Excel file
+    const fileBuffer = fs.readFileSync(filePath);
+    
+    // Parse Excel file
+    const parseResult = parseExcelFile(fileBuffer);
+    
+    if (!parseResult.success) {
+      return parseResult;
+    }
+    
+    console.log(`Parsed Excel file: ${parseResult.totalRows} rows, ${parseResult.columnCount} columns`);
+    
+    return parseResult;
+    
+  } catch (error) {
+    console.error('Error reading Excel file:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('import-excel-transactions', async (event, { companyId, rows, mapping, groupingMode }) => {
+  if (!db) return { success: false, error: 'Database not initialized' };
+  const dbPath = path.join(app.getPath('userData'), 'accounting.db');
+  
+  try {
+    // Convert Excel data to transactions
+    const convertResult = convertExcelToTransactions({
+      rows,
+      mapping,
+      companyId,
+      groupingMode
+    });
+    
+    if (!convertResult.success) {
+      return convertResult;
+    }
+    
+    // Get account map for the company
+    const accountMapResult = db.exec(
+      'SELECT id, account_number FROM accounts WHERE company_id = ?',
+      [companyId]
+    );
+    
+    const accountMap = {};
+    if (accountMapResult.length > 0) {
+      accountMapResult[0].values.forEach(row => {
+        accountMap[row[1]] = row[0]; // account_number -> account_id
+      });
+    }
+    
+    let imported = 0;
+    const errors = convertResult.errors || [];
+    
+    // Import transactions
+    for (const transaction of convertResult.transactions) {
+      try {
+        // Insert transaction
+        db.run(
+          'INSERT INTO transactions (company_id, transaction_date, description) VALUES (?, ?, ?)',
+          [companyId, transaction.transaction_date, transaction.description]
+        );
+        
+        const result = db.exec('SELECT last_insert_rowid() as id');
+        const transactionId = result[0].values[0][0];
+        
+        // Insert transaction lines
+        for (const line of transaction.lines) {
+          const accountId = accountMap[line.account_number];
+          
+          if (!accountId) {
+            errors.push({
+              transaction: transaction.description,
+              error: `Account ${line.account_number} not found`
+            });
+            continue;
+          }
+          
+          db.run(
+            'INSERT INTO transaction_lines (transaction_id, account_id, debit, credit) VALUES (?, ?, ?, ?)',
+            [transactionId, accountId, line.debit, line.credit]
+          );
+        }
+        
+        imported++;
+      } catch (error) {
+        errors.push({
+          transaction: transaction.description,
+          error: error.message
+        });
+      }
+    }
+    
+    saveDatabase(dbPath);
+    
+    console.log(`Excel import complete: ${imported} transactions imported`);
+    
+    return {
+      success: true,
+      imported,
+      totalProcessed: convertResult.transactions.length,
+      errors
+    };
+    
+  } catch (error) {
+    console.error('Error importing Excel transactions:', error);
     return { success: false, error: error.message };
   }
 });
